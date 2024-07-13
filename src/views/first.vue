@@ -12,15 +12,15 @@ const scene =  new THREE.Scene();
 
 function init(){
     //创建物体形状
- //const geometry =  new THREE.BoxGeometry(100,100,100)
+ const geometry =  new THREE.BoxGeometry(40,40,40)
 
 // //创建材质
 // const  marterial =  new THREE.MeshBasicMaterial({color:"red"})
-const geometry = new THREE.PlaneGeometry(60, 60);
+//const geometry = new THREE.PlaneGeometry(60, 60);
 const textureLoader = new THREE.TextureLoader();
 let textp = textureLoader.load('/webstorm.png')
 const material = new THREE.MeshBasicMaterial({
-    map: textp
+    color:'red'
 });
 
 const mesh = new THREE.Mesh(geometry, material);
@@ -33,14 +33,15 @@ const mesh = new THREE.Mesh(geometry, material);
 
 //将物体添加到场景中
 scene.add(mesh)
-console.log(thress.value.clientWidth,thress.value.clientHeight,'-fwefwfef')
+
 
 
 //创建相机
-  const camera =  new THREE.PerspectiveCamera(75,thress.value.clientWidth/thress.value.clientHeight,0.1,1000)
+  const camera =  new THREE.PerspectiveCamera(30,thress.value.clientWidth/thress.value.clientHeight,0.1,1000)
 
 //设置相机位置
-camera.position.z = 200;
+camera.position.set(100,100,100);
+camera.lookAt(mesh.position)
 
  // 光线
 
@@ -50,17 +51,20 @@ var renderer = new THREE.WebGLRenderer();
   renderer.render(scene, camera)
 
   const controls = new OrbitControls(camera, renderer.domElement)
-  controls.enableDamping = true
+ 
     controls.target.set(0, 0, 0)
     controls.update()
-    const animate = () => {
-      requestAnimationFrame(animate)
-      mesh.rotation.x += 0.01;
-      mesh.rotation.y += 0.01;
-      controls.update()
-      renderer.render(scene, camera)
-    }
-    animate()
+    controls.addEventListener('change', function () {
+    renderer.render(scene, camera); //执行渲染操作
+});
+    // const animate = () => {
+    //   requestAnimationFrame(animate)
+    //   mesh.rotation.x += 0.01;
+    //   mesh.rotation.y += 0.01;
+    //   controls.update()
+    //   renderer.render(scene, camera)
+    // }
+    // animate()
 }
 
 onMounted(()=>{

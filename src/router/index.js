@@ -25,6 +25,14 @@ let routes =[
                     title: "图层"
                   },
                 component:()=>import('@/views/login.vue')
+            },
+            {
+                path:'/first',
+                name:'first',
+                meta: {
+                    title: "first"
+                  },
+                component:()=>import('@/views/first.vue')
             }
         ]
     }
