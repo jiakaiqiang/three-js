@@ -1,5 +1,10 @@
 import {createRouter,createWebHashHistory} from 'vue-router'
 import basicLayout from '@/components/basicLayout.vue'
+
+//获取views 下所有的文件名称
+const files = require.context('@/views', true, /\.vue$/);
+
+
 let routes =[
     {
         path:'/',
@@ -10,26 +15,21 @@ let routes =[
         component:basicLayout,
         redirect:'/init',
         children:[
-            {
-                path:'/init',
-                name:'init',
-                meta: {
-                    title: "初始化"
-                  },
-                component:()=>import('@/views/init.vue')
-            },
-            {
-                path:'/login',
-                name:'login',
-                meta: {
-                    title: "图层"
-                  },
-                component:()=>import('@/views/login.vue')
-            }
+           
         ]
     }
 
 ]
+files.keys().forEach(key => {
+    routes[0].children.push({
+        path: key.replace('./', '/').replace('.vue', ''),
+        name: key.replace('./', '').replace('.vue', ''),
+        meta: {
+            title: key.replace('./', '').replace('.vue', '')
+          },
+        component: files(key).default
+    })
+})
 export {routes}
 // 创建路由实例
 const router =  createRouter({
