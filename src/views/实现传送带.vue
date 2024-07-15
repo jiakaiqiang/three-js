@@ -12,16 +12,20 @@ const scene =  new THREE.Scene();
 
 function init(){
     //创建物体形状
- const geometry =  new THREE.BoxGeometry(40,40,40)
+ //const geometry =  new THREE.BoxGeometry(40,40,40)
 
 // //创建材质
 // const  marterial =  new THREE.MeshBasicMaterial({color:"red"})
-//const geometry = new THREE.PlaneGeometry(60, 60);
+const geometry = new THREE.PlaneGeometry(100,40);
 const textureLoader = new THREE.TextureLoader();
-let textp = textureLoader.load('/webstorm.png')
+let textp = textureLoader.load('webstorm.png') //加载贴图使用require 的方式保证初始化的时候渲染
+
 const material = new THREE.MeshBasicMaterial({
-    color:'red'
+    map:textp
 });
+//设置x 方向上的重复
+textp.wrapS = THREE.RepeatWrapping;
+
 
 const mesh = new THREE.Mesh(geometry, material);
 //创建物体
@@ -33,17 +37,19 @@ const mesh = new THREE.Mesh(geometry, material);
 
 //将物体添加到场景中
 scene.add(mesh)
-
+// AxesHelper：辅助观察的坐标系
+const axesHelper = new THREE.AxesHelper(100);
+scene.add(axesHelper);
 
 
 //创建相机
   const camera =  new THREE.PerspectiveCamera(30,thress.value.clientWidth/thress.value.clientHeight,0.1,1000)
 
 //设置相机位置
-camera.position.set(100,100,100);
+camera.position.set(200,200,200);
 camera.lookAt(mesh.position)
 
- // 光线
+
 
 var renderer = new THREE.WebGLRenderer();
   renderer.setSize(thress.value.clientWidth, thress.value.clientHeight)
@@ -57,14 +63,13 @@ var renderer = new THREE.WebGLRenderer();
     controls.addEventListener('change', function () {
     renderer.render(scene, camera); //执行渲染操作
 });
-    // const animate = () => {
-    //   requestAnimationFrame(animate)
-    //   mesh.rotation.x += 0.01;
-    //   mesh.rotation.y += 0.01;
-    //   controls.update()
-    //   renderer.render(scene, camera)
-    // }
-    // animate()
+    const animate = () => {
+      requestAnimationFrame(animate)
+      textp.offset.x+=0.01
+     controls.update()
+      renderer.render(scene, camera)
+    }
+    animate()
 }
 
 onMounted(()=>{
