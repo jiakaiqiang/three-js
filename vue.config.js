@@ -9,6 +9,12 @@ module.exports = defineConfig({
         "@":resolve(__dirname,"src"),
       }
     }
-  }
+  },
+  // devServer:{
+  //   headers: {
+  //     "Access-Control-Allow-Origin": "*" // 开启应用间的跨域访问
+  //   },
+    
+  // }
   
 })
