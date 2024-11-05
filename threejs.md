@@ -43,6 +43,8 @@ controls.screenSpacePanning = false; // 禁止平移
     如果我们设置了相机控件 同时改变了 camera.lookat 属性，那么 camera.lookat 
 属性将失效。 则同时需要设置相机控件的lookAt 属性 即可实现 同时调用相机控件的update() 方法
 ```
+2.3 正投影相机
+
 
 **3. 渲染器（Renderer）**
 
@@ -114,6 +116,313 @@ textureLoader.load('path/to/texture.jpg', function(texture) {
     scene.add(texturedCube);
 });
 ```
+
+**案例：使用`GLTFLoader`加载3D模型**
+
+```javascript
+const loader = new THREE.GLTFLoader();
+loader.load('path/to/model.gltf', function(gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+});
+```
+
+**四、曲线和几何体**
+
+**案例：创建贝塞尔曲线**
+
+```javascript
+// 三维三次
+
+const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-10, 0, 0),
+    new THREE.Vector3(-5, 5, 0),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(5, -5, 0),
+    new THREE.Vector3(10, 0, 0)
+]);
+
+//三维二次
+/*
+*const curve = new THREE.QuadraticBezierCurve([
+    new THREE.Vector3(-10, 0, 0),
+    new THREE.Vector3(-5, 5, 0),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(5, -5, 0),
+    new THREE.Vector3(10, 0, 0)
+]);
+*/ 
+
+const points = curve.getPoints(50);
+const geometry = new THREE.BufferGeometry().setFromPoints(points);
+const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+const curveObject = new THREE.Line(geometry, material);
+scene.add(curveObject);
+```
+
+**案例：创建自定义几何体**
+
+所有的线都继承父类Curve，而Curve又继承自Geometry，所以线也可以看作是一种特殊的几何体。也就是说所有的线 都有Curve 和Geometry 的属性和方法。
+
+- 椭圆和园 
+  ```js
+  1.椭圆
+      // 参数1和2表示椭圆中心坐标  参数3和4表示x和y方向半径
+      const arc = new THREE.EllipseCurve(0, 0, 100, 50);
+      //getPoints是基类Curve的方法，平面曲线会返回一个vector2对象作为元素组成的数组
+      const pointsArr = arc.getPoints(50); //分段数50，返回51个顶点
+       //定义物体
+       const geometry = new THREE.BufferGeometry();
+        geometry.setFromPoints(pointsArr);      //按照分段后的间距 等距的将顶点坐标返回
+      // 绘制曲线
+        // 线材质
+        const material = new THREE.LineBasicMaterial({
+            color: 0x00fffff
+        });
+        // 线模型
+        const line = new THREE.Line(geometry, material);
+  2.圆形
+   const arc = new THREE.ArcCurve(0, 0, 100, 0, 2 * Math.PI);// 将EllipseCurve()替换即可
+
+ 
+
+  ```
+- 三样条曲线 任意点的曲线连线
+  ```js
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-10, 0, 0),
+    new THREE.Vector3(-5, 5, 0),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(5, -5, 0),
+    new THREE.Vector3(10, 0, 0)
+  ]);
+  //划分点
+  const points = curve.getPoints(50);
+   //通过划分点定义物体
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  //定义材质
+    const material = new THREE.PointsMaterial({
+      color: 0xff0000 //线条颜色
+      ,size:10
+  });
+  //将物体和才是合并生成模型对象
+  const line = new THREE.Points(geometry, material);//线条模型对象
+   //将模型对象添加到场景中
+
+  scene.add(line);
+  ```
+- 管道
+  ```js
+
+  //定义管道的路径 可以事三样条曲线也还可以是直线也可以是贝塞尔曲线等
+     const path = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-50, 20, 90),
+    new THREE.Vector3(-10, 40, 40),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(60, -60, 0),
+    new THREE.Vector3(70, 0, 80)
+  ]);
+   //有四个参数 1.管道路径2.路径方向细分数 3.管道半径4.管道圆弧细分5.管道是否闭合
+   const geometry = new THREE.TubeGeometry(path, 40, 2, 25);
+
+  ```
+- 旋转成型
+  ```js
+  1.通过点生成
+   const pointsArr = [
+    new THREE.Vector2(50, 60),
+    new THREE.Vector2(25, 0),
+    new THREE.Vector2(50, -60)
+  ];
+  // LatheGeometry：pointsArr轮廓绕y轴旋转生成几何体曲面
+  // pointsArr：旋转几何体的旋转轮廓形状 
+   //有四个参数 
+     //1.旋转轮廓2.旋转细分精度 越大越平滑3.旋转角度4.旋转起始角度
+
+  const geometry = new THREE.LatheGeometry(pointsArr,30,0,Math.PI);
+  ```
+  2.通过曲线生成
+  ```js
+  // 通过三个点定义一个二维样条曲线
+    const curve = new THREE.SplineCurve([
+        new THREE.Vector2(50, 60),
+        new THREE.Vector2(25, 0),
+        new THREE.Vector2(50, -60)
+    ]);
+    //曲线上获取点,作为旋转几何体的旋转轮廓
+    const pointsArr = curve.getPoints(50); 
+    console.log('旋转轮廓数据',pointsArr);
+    // LatheGeometry：pointsArr轮廓绕y轴旋转生成几何体曲面
+    const geometry = new THREE.LatheGeometry(pointsArr, 30);
+
+  ```
+  3.轮廓填充
+  ```js
+     const pointsArr = [
+    new THREE.Vector2(-50, -50),
+    new THREE.Vector2(-60, 0),
+    new THREE.Vector2(0, 50),
+    new THREE.Vector2(60, 0),
+    new THREE.Vector2(50, -50),
+    ]
+
+    const shape = new THREE.Shape(pointsArr); //平面多变形轮廓
+    const geometry = new THREE.ShapeGeometry(shape); //填充-生成多变形物体。
+      
+    // 线材质
+    const material = new THREE.MeshBasicMaterial({
+        wireframe:true,
+    });
+
+    const Mesh = new THREE.Mesh(geometry, material);
+    scene.add(Mesh);
+  ```
+4.拉伸
+ 
+```js
+  const pointsArr = [
+    new THREE.Vector2(-50, -50),
+    new THREE.Vector2(-60, 0),
+    new THREE.Vector2(0, 50),
+    new THREE.Vector2(60, 0),
+    new THREE.Vector2(50, -50),
+    ]
+
+    const shape = new THREE.Shape(pointsArr); //平面多变形轮廓
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+        depth: 100, //拉伸深度
+        bevelEnabled: true, //是否开启倒角
+    });
+
+    // 线材质
+    const material = new THREE.MeshBasicMaterial({
+        wireframe:true,
+    });
+
+    const Mesh = new THREE.Mesh(geometry, material);
+    scene.add(Mesh);
+  ```
+  5.扫描
+
+```js
+  const pointsArr = [
+    new THREE.Vector2(-50, -50),
+    new THREE.Vector2(-60, 0),
+    new THREE.Vector2(0, 50),
+    new THREE.Vector2(60, 0),
+    new THREE.Vector2(50, -50),
+    ]
+
+    const shape = new THREE.Shape(pointsArr); //平面多变形轮廓
+    const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3( -10, -50, -50 ),
+    new THREE.Vector3( 10, 0, 0 ),
+    new THREE.Vector3( 8, 50, 50 ),
+    new THREE.Vector3( -5, 0, 100)
+]);
+
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+        depth: 100, //拉伸深度
+          extrudePath:curve,//扫描轨迹
+        bevelEnabled: true, //是否开启倒角
+    });
+    // 线材质
+    const material = new THREE.MeshBasicMaterial({
+        wireframe:true,
+    });
+
+    const Mesh = new THREE.Mesh(geometry, material);
+    scene.add(Mesh);
+  ```
+  - 模型边界线
+   定义模型边界线的话首先我们创建物体和材质（材质可根据要求透明等） 将材质和物体Mesh  将生成的物体通过EdgesGeometry 生成新的物体 在创建线材质。将新物体和线材质通过lineSegments 生成模型线数据 添加到mesh(网格模型)中。
+  ```js
+      const geometry = new THREE.BoxGeometry(50, 50, 50);
+        const material = new THREE.MeshLambertMaterial({
+            color: 0x004444,
+            transparent:true, //背景穿透
+            opacity:0.5,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+
+        // 长方体作为EdgesGeometry参数创建一个新的几何体
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+          color: 0x00ffff,
+        })
+        const line = new THREE.LineSegments(edges, edgesMaterial);
+        mesh.add(line);
+        scene.add(mesh);
+  ```
+  - 几何顶点颜色数据
+  ```js
+     // 创建几何模型
+    const geometry =  new THREE.BufferGeometry()
+    //定义位置数据
+    const vertices = new Float32Array([
+    0, 0, 0, //顶点1坐标
+    50, 0, 0, //顶点2坐标
+    0, 25, 0, //顶点3坐标
+    ]);
+    //设置顶点的坐标数据
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+
+    const colors = new Float32Array([
+        1, 0, 0, //顶点1颜色
+        0, 0, 1, //顶点2颜色
+        0, 1, 0, //顶点3颜色
+    ]);
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.MeshBasicMaterial({
+        // color: 0x333333,//使用顶点颜色数据，color属性可以不用设置
+        vertexColors:true,//默认false，设置为true表示使用顶点颜色渲染
+        size: 20.0, //点对象像素尺寸
+    });
+    const mesh = new THREE.Mesh(geometry, material); //点模型对象
+    scene.add(mesh);
+     
+  ```
+- 曲线渐变
+```js
+        const arr = [
+        new THREE.Vector3(-50, 20, 90),
+        new THREE.Vector3(-10, 40, 40),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(60, -60, 0),
+        new THREE.Vector3(70, 0, 80)
+    ]
+    const arc = new THREE.CatmullRomCurve3(arr); //SplineCurve 平面 CatmullRomCurve3 3D曲线
+
+
+    
+        const pointsArr = arc.getPoints(50); //分段数50，返回51个顶点
+        const geometry = new THREE.BufferGeometry().setFromPoints(pointsArr);
+    // 线材质
+    const material = new THREE.LineBasicMaterial({
+        vertexColors: true, //使用顶点颜色渲染
+    });
+    const pos = geometry.attributes.position;
+    const count = pos.count; //顶点数量
+    // 计算每个顶点的颜色值
+    const colorsArr = [];
+    for (let i = 0; i < count; i++) {
+        const percent = i / count; //点索引值相对所有点数量的百分比
+        //根据顶点位置顺序大小设置颜色渐变
+        // 红色分量从0到1变化，蓝色分量从1到0变化
+        colorsArr.push(percent, 0, 1 - percent); //蓝色到红色渐变色
+    }
+    //类型数组创建顶点颜色color数据
+    const colors = new Float32Array(colorsArr);
+    // 设置几何体attributes属性的颜色color属性
+    geometry.attributes.color = new THREE.BufferAttribute(colors, 3);
+    const line = new THREE.Line(geometry, material);//线条模型对象
+  ```
+
+
+
+
 
 **四、动画与交互进阶**
 

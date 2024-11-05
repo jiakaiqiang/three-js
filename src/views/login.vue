@@ -39,6 +39,24 @@ const loader = new GLTFLoader();
    loader.load( '/gltf/officeBlock.gltf', function ( gltf ) {
   console.log('控制台查看加载gltf文件返回的对象结构',gltf);
   console.log('gltf对象场景属性',gltf.scene);
+  //我们给模型添加模型边界线
+  gltf.scene.traverse(function (obj) {
+        if (obj.isMesh) {
+            // 模型材质重新设置
+            obj.material = new THREE.MeshBasicMaterial({
+                color: 0x004444,
+                transparent: true,
+                opacity: 0.5,
+            });
+            // 模型边线设置
+            const edges = new THREE.EdgesGeometry(obj.geometry);
+            const edgesMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ffff,
+            })
+            const line = new THREE.LineSegments(edges, edgesMaterial);
+            obj.add(line);
+        }
+    });
 
   // 返回的场景对象gltf.scene插入到threejs场景中
   scene.add( gltf.scene );

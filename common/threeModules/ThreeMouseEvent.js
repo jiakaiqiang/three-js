@@ -23,7 +23,7 @@ export default class ThreeMouseEvent {
     this.viewer.renderer.domElement.addEventListener(this.type, this.bingEvent)
   }
   stopSelect() {
-    this.viewer.renderer.domElement.removeEventListener(this.type, this.bingEvent)
+    this.viewer.renderer.domElement.removeEventListener(this.type, this.viewer)
   }
   #event(that, event) {
     const raycaster = new THREE.Raycaster() // 创建射线
