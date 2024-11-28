@@ -1,7 +1,19 @@
 <template>
-  <div ref="thress" class="three-dom" @click="handleClick"></div>
+ <div style="height:100%;width:100%">
+   <div ref="thress" class="three-dom" @click="handleClick">
+    <div
+      id="plane"
+      :style="{left: state.planePos.left,top:state.planePos.top,display: state.planeDisplay}"
+    >
+      <p>机柜名称：{{ state.curCabinet.name }}</p>
+      <p>机柜温度：{{ state.curCabinet.temperature }}°</p>
+      <p>使用情况：{{ state.curCabinet.count}} / {{ state.curCabinet.capacity}}</p>
+    </div>
+     
+  </div>
+ <el-button @click="handleAuto" style="position: absolute; top: 10px; left: 10px">自动巡检</el-button>
+ </div>
 </template>
-    
 
 <script setup>
 import { ref, onMounted, reactive } from "vue";
@@ -11,18 +23,82 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import addHeatmapPlane from "../components/roomData/yuntu";
+import { PathGeometry, PathPointList } from "three.path";
+import * as TWEEN from '@tweenjs/tween.js'
 const thress = ref(null);
 const scene = new THREE.Scene();
+let  camera 
+let pathCurve;
+let cameraTween=null;
+let  cubPerson 
 let jkqSelectObect = {};
+const state = reactive({
+  planePos: {
+    left: 0,
+    top: 0
+  },
+  planeDisplay: "none",
+  curCabinet: {
+    name: "Loading……",
+    temperature: 0,
+    capacity: 0,
+    count: 0
+  }
+});
 
-//创建射线投射器
+let arrow = '';
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-
 let maps = new Map();
+let pathToShow;
+let points;
+let pointArr;
+let renderFunc = {};
+
+const registerRenderFunc = (name, func) => {
+  renderFunc[name] = func;
+};
+
+const initPathPoints = () => {
+  pointArr = [
+    2,0,-5.5,
+    -9,0,-5.5,
+    -9,0,-3,
+    9,0,-3,
+    9,0,2,
+    -5,0,2,
+    // 其他坐标点...
+  ];
+
+  points = [];
+  for (let i = 0; i < pointArr.length; i += 3) {
+    points.push(new THREE.Vector3(pointArr[i], pointArr[i + 1], pointArr[i + 2]));
+  }
+
+  pathCurve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0);
+
+
+};
+
+
 
 function init() {
-  //加载模型
+  var renderer = new THREE.WebGLRenderer();
+  initPathPoints();
+  renderPath(renderer);
+
+  //创建一个立方体
+  const geoPerson = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const matPeron = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+   cubPerson = new THREE.Mesh(geoPerson, matPeron);
+  cubPerson.position.set(2,0,-5.5);
+
+
+
+
+
+
 
   const gltfLoader = new GLTFLoader();
   gltfLoader.load(
@@ -40,18 +116,18 @@ function init() {
       });
 
       scene.add(gltf.scene);
+      scene.add(pathToShow); // 确保路径贴图被添加到场景中
     },
     num => {},
     err => {
       console.log(err, "----wfef");
     }
   );
-  // 建立纹理对象
+
   function crtTexture(imgName) {
     let curTexture = maps.get(imgName);
     if (!curTexture) {
       curTexture = new THREE.TextureLoader().load(`models/${imgName}.jpg`);
-
       curTexture.flipY = false;
       curTexture.wrapS = 0.5;
       curTexture.wrapT = 0.5;
@@ -60,124 +136,267 @@ function init() {
     return curTexture;
   }
 
-  //创建相机
-  const camera = new THREE.PerspectiveCamera(
-    30,
+   camera = new THREE.PerspectiveCamera(
+   75,
     thress.value.clientWidth / thress.value.clientHeight,
     0.1,
     1000
   );
 
-  //设置相机位置
-  camera.position.set(30, 30, 30);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(15,15, 15);
+  camera.lookAt(0,0,0);
+  cubPerson.add(camera)
+  scene.add(cubPerson);
+
   const outlinePass = new OutlinePass(
     new THREE.Vector2(thress.value.clientWidth, thress.value.clientHeight),
     scene,
     camera
   );
 
-  //创建渲染器
-  var renderer = new THREE.WebGLRenderer();
   renderer.setSize(thress.value.clientWidth, thress.value.clientHeight);
   thress.value.appendChild(renderer.domElement);
-  renderer.render(scene, camera);
+
   const composer = new EffectComposer(renderer);
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
-
-  // outlinePass.visibleEdgeColor.set(0xff0000); // 可见边缘颜色
-  // outlinePass.hiddenEdgeColor.set(0xffffff); // 隐藏边缘颜色
-  // outlinePass.edgeStrength = 5; // 边缘强度
-  // outlinePass.edgeThickness = 1; // 边缘厚度
   composer.addPass(outlinePass);
-  const controls = new OrbitControls(camera, renderer.domElement);
 
+  const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0, 0);
   controls.update();
+
   controls.addEventListener("change", function() {
-    renderer.render(scene, camera); //执行渲染操作
+    renderer.render(scene, camera);
   });
+let step = 0;
   function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
     camera.updateProjectionMatrix();
+    if (renderFunc['walk-way']) {
+      renderFunc['walk-way']();
+    }
+    if ( cameraTween){
+      
+      const segment = 10000;
+// 从路径曲线上面取点
+const stepPoints = pathCurve.getSpacedPoints(segment);
+
+// 每次前进一小段
+step += 1;
+
+// NPC下个位置的索引
+const npcIndex = step % segment;
+
+// NPC下一个位置
+const npcPoint = stepPoints[npcIndex];
+  
+// 更新NPC模型的位置
+  cubPerson.position.copy(npcPoint);
+
+// NPC眼睛看向的点的索引
+const eyeIndex = (step + 10) % segment;
+
+// NPC眼睛看向的位置
+const eyePoint = stepPoints[eyeIndex];
+
+// 更新NPC模型看向的位置，保证模型的“朝向”
+cubPerson.lookAt(eyePoint.x,eyePoint.y, npcPoint.z);
+
+camera.lookAt(cubPerson.position.x,1,cubPerson.position.z);
+
+ 
+    
+
+// 更新NPC模型看向的位置，保证模型的“朝向”
+  
+
+   //TWEEN.update();
+    }
+    
+ 
   }
   animate();
-  renderer.domElement.addEventListener('click',event=>{
-    if (Object.keys(jkqSelectObect).length>0) {
 
+  renderer.domElement.addEventListener("click", event => {
+    if (Object.keys(jkqSelectObect).length > 0) {
       jkqSelectObect.material.map = crtTexture("cabinet");
-
-    }else{
-
+    } else {
       jkqSelectObect.material.map = crtTexture("cabinet-hover");
     }
+  });
 
-  })
   renderer.domElement.addEventListener("mousemove", event => {
-    // left、top表示canvas画布布局，距离顶部和左侧的距离(px)
     const px = event.offsetX;
     const py = event.offsetY;
-    //屏幕坐标px、py转标准设备坐标x、y
-    //width、height表示canvas画布宽高度
     const x = (px / thress.value.clientWidth) * 2 - 1;
     const y = -(py / thress.value.clientHeight) * 2 + 1;
-    const raycaster = new THREE.Raycaster();
+
     raycaster.ray.origin = new THREE.Vector3(0, 100, 0);
-    // 设置射线方向射线方向沿着x轴
     raycaster.ray.direction = new THREE.Vector3(0, -1, 0);
-    //.setFromCamera()计算射线投射器`Raycaster`的射线属性.ray
-    // 形象点说就是在点击位置创建一条射线，射线穿过的模型代表选中
     raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-    // 计算物体和射线的交点，选中多个物体时，point为交点数组
+
     const intersects = raycaster.intersectObjects(scene.children);
 
-
-
+    state.planePos.left = px + "px";
+    state.planePos.top = py + "px";
 
     if (intersects.length > 0) {
       if (intersects[0].object.name.split("-")[0] === "cabinet") {
-        // 获取选中最近的物体
         const selectObject = intersects[0].object;
-        // 设置选中物体边框
         outlinePass.selectedObjects = [selectObject];
-       
-        // 设置选中物体颜色
-        if (Object.keys(jkqSelectObect).length>0 && jkqSelectObect?.name != selectObject.name) {
-          jkqSelectObect.material.map = crtTexture("cabinet");
-          document.body.style.cursor =  'default'
-        }else{
 
-          document.body.style.cursor='pointer'
+        if (Object.keys(jkqSelectObect).length > 0 && jkqSelectObect?.name != selectObject.name) {
+          state.planeDisplay = "block";
+          state.curCabinet = {
+            name: `测试机柜001`,
+            temperature: 12,
+            capacity: 20,
+            count: 5
+          };
+
+          jkqSelectObect.material.map = crtTexture("cabinet");
+          document.body.style.cursor = "default";
+        } else {
+          document.body.style.cursor = "pointer";
           selectObject.material.map = crtTexture("cabinet-hover");
-          }
-      
-         jkqSelectObect = selectObject;
+        }
+
+        jkqSelectObect = selectObject;
+      } else {
+        state.planeDisplay = 'none';
       }
-     
     } else {
-      // 清空选中物体
       outlinePass.selectedObjects = [];
     }
   });
+
+  
+  addHeatmapPlane(scene);
+}
+
+const renderPath = async (renderer) => {
+  arrow = await new THREE.TextureLoader().loadAsync(require("@/assets/arrow.png"));
+  arrow.wrapS = THREE.RepeatWrapping;
+  arrow.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  registerRenderFunc('walk-way', () => {
+    arrow.offset.x -= 0.02;
+  });
+
+  const material = new THREE.MeshBasicMaterial({
+    map: arrow,
+  
+    blending: THREE.CustomBlending,
+  });
+
+  const up = new THREE.Vector3(0, 1, 0);
+
+  let pathPoints = new PathPointList();
+  pathPoints.set(pathCurve.getPoints(1000), 0.5, 1, up, false);
+
+  const geometry = new PathGeometry();
+  geometry.update(pathPoints, {
+    width: 0.2,
+    arrow: false,
+  });
+
+  pathToShow = new THREE.Mesh(geometry, material);
+  pathToShow.position.y = 0.2;
+  pathToShow.name = "path";
+};
+
+
+function changeLookAt(npcPoint) {
+	// 当前点在线条上的位置
+	const position = npcPoint
+	var nPos = new THREE.Vector3(position.x, position.y - 100, position.z);
+	cubPerson.position.copy(nPos);
+	// 返回点t在曲线上位置切线向量
+	const tangent = curve.getTangentAt(t);
+	// 位置向量和切线向量相加即为所需朝向的点向量
+	const lookAtVec = tangent.add(nPos);
+	mesh.lookAt(lookAtVec);
+ 
+	if (t > 0.03) {
+		var pos = curve.getPointAt(t - 0.03);
+		camera.position.copy(pos);
+		camera.lookAt(position)
+	}
+
+}
+
+const handleAuto = ()=>{
+
+  cameraTween =  true
+
+
+camera.position.set(0, 1,-1 );
+// const segment = 30000;
+
+
+
+
+
+// // // 取相机当前位置，从当前位置，平滑移动到目标位置
+//  const curCameraPosition = camera.position.clone();
+// const position = new THREE.Vector3(9, 0, 2);
+// //获取相机的视图
+// const duration =12000
+// // 创建补间动画TWEEN对象
+// cameraTween = new TWEEN.Tween(curCameraPosition).to(position, duration).easing(TWEEN.Easing.Quadratic.Out);
+
+// // 设定更新过程中执行的动作
+// cameraTween.onUpdate((obj) => {
+
+
+//   // 持续duration毫秒的移动过程中， obj为“此时”坐标移动到的位置，通过不断地将相机的位置设定到坐标“此时”变化到的位置，来形成一个平滑的移动效果。
+//   camera.position.set(obj.x, obj.y, obj.z);
+//   camera.lookAt(obj.x, obj.y, obj.z);
+
+//   // 如果指定了onUpdate方法，再执行下指定的onUpdate
+//   onUpdate && onUpdate(obj);
+// });
+
+// // 设定完成后执行的动作
+// cameraTween.onComplete(() => {
+//   callback && callback();
+// });
+
+
+
+
 }
 
 onMounted(() => {
   init();
 });
-// 选择机柜
+
 function selectCabinet(x, y) {
   const { width, height } = thress.value;
   pointer.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
 }
+
 function handleClick(e) {
   console.log(e);
 }
 </script>
+
 <style scoped lang="less">
 .three-dom {
   width: 100%;
   height: 100%;
+}
+
+#plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 0 18px;
+  transform: translate(12px, -100%);
+  display: none;
 }
 </style>
