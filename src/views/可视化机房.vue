@@ -12,6 +12,7 @@
      
   </div>
  <el-button @click="handleAuto" style="position: absolute; top: 10px; left: 10px">自动巡检</el-button>
+   <el-button @click="changeEyes" style="position: absolute; top: 10px; left:100px">切换视角</el-button>
  </div>
 </template>
 
@@ -33,6 +34,8 @@ let pathCurve;
 let cameraTween=null;
 let  cubPerson 
 let jkqSelectObect = {};
+let eyesValue =  ref({})
+let controls;
 const state = reactive({
   planePos: {
     left: 0,
@@ -88,15 +91,11 @@ function init() {
   initPathPoints();
   renderPath(renderer);
 
-  //创建一个立方体
+  //创建机器人
   const geoPerson = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const matPeron = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
    cubPerson = new THREE.Mesh(geoPerson, matPeron);
   cubPerson.position.set(2,0,-5.5);
-
-
-
-
 
 
 
@@ -148,6 +147,9 @@ function init() {
   cubPerson.add(camera)
   scene.add(cubPerson);
 
+  //创建十字坐标
+  scene.add(new THREE.AxesHelper(5))
+
   const outlinePass = new OutlinePass(
     new THREE.Vector2(thress.value.clientWidth, thress.value.clientHeight),
     scene,
@@ -162,9 +164,8 @@ function init() {
   composer.addPass(renderPass);
   composer.addPass(outlinePass);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0, 0);
-  controls.update();
+  controls = new OrbitControls(camera, renderer.domElement);
+
 
   controls.addEventListener("change", function() {
     renderer.render(scene, camera);
@@ -200,11 +201,13 @@ const eyeIndex = (step + 10) % segment;
 
 // NPC眼睛看向的位置
 const eyePoint = stepPoints[eyeIndex];
+if(eyesValue.value){
+  // 更新NPC模型看向的位置，保证模型的“朝向”
+  cubPerson.lookAt(eyePoint.x,eyePoint.y, npcPoint.z);
 
-// 更新NPC模型看向的位置，保证模型的“朝向”
-cubPerson.lookAt(eyePoint.x,eyePoint.y, npcPoint.z);
+  camera.lookAt(cubPerson.position.x,1,cubPerson.position.z);
+}
 
-camera.lookAt(cubPerson.position.x,1,cubPerson.position.z);
 
  
     
@@ -220,8 +223,13 @@ camera.lookAt(cubPerson.position.x,1,cubPerson.position.z);
   animate();
 
   renderer.domElement.addEventListener("click", event => {
+    console.log(jkqSelectObect,'jkqSelectObect')
     if (Object.keys(jkqSelectObect).length > 0) {
       jkqSelectObect.material.map = crtTexture("cabinet");
+      camera.position.set(jkqSelectObect.position.x+1,3,jkqSelectObect.position.z)
+      camera.lookAt(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
+      // controls.target.copy(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
+      // controls.update()
     } else {
       jkqSelectObect.material.map = crtTexture("cabinet-hover");
     }
@@ -308,36 +316,28 @@ const renderPath = async (renderer) => {
 };
 
 
-function changeLookAt(npcPoint) {
-	// 当前点在线条上的位置
-	const position = npcPoint
-	var nPos = new THREE.Vector3(position.x, position.y - 100, position.z);
-	cubPerson.position.copy(nPos);
-	// 返回点t在曲线上位置切线向量
-	const tangent = curve.getTangentAt(t);
-	// 位置向量和切线向量相加即为所需朝向的点向量
-	const lookAtVec = tangent.add(nPos);
-	mesh.lookAt(lookAtVec);
- 
-	if (t > 0.03) {
-		var pos = curve.getPointAt(t - 0.03);
-		camera.position.copy(pos);
-		camera.lookAt(position)
-	}
 
+const changeEyes =  ()=>{
+  eyesValue.value =  !eyesValue.value
+  if(!eyesValue.value){
+    camera.lookAt(0,0,0);
+    camera.position.set(0,20,4)
+    scene.add(camera)
+    controls.enabled =  true
+    controls.update()
+  }else{
+    controls.enabled =  false
+  }
 }
 
 const handleAuto = ()=>{
 
   cameraTween =  true
+  controls.enabled =  false
 
 
-camera.position.set(0, 1,-1 );
+   camera.position.set(0, 1,-1 );
 // const segment = 30000;
-
-
-
-
 
 // // // 取相机当前位置，从当前位置，平滑移动到目标位置
 //  const curCameraPosition = camera.position.clone();
