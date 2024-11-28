@@ -1,40 +1,41 @@
 <template>
- <div style="height:100%;width:100%">
-   <div ref="thress" class="three-dom" @click="handleClick">
-    <div
-      id="plane"
-      :style="{left: state.planePos.left,top:state.planePos.top,display: state.planeDisplay}"
-    >
-      <p>机柜名称：{{ state.curCabinet.name }}</p>
-      <p>机柜温度：{{ state.curCabinet.temperature }}°</p>
-      <p>使用情况：{{ state.curCabinet.count}} / {{ state.curCabinet.capacity}}</p>
+  <div style="height:100%;width:100%">
+    <div ref="thress" class="three-dom" @click="handleClick">
+      <div
+          id="plane"
+          :style="{left: state.planePos.left,top:state.planePos.top,display: state.planeDisplay}"
+      >
+        <p>机柜名称：{{ state.curCabinet.name }}</p>
+        <p>机柜温度：{{ state.curCabinet.temperature }}°</p>
+        <p>使用情况：{{ state.curCabinet.count }} / {{ state.curCabinet.capacity }}</p>
+      </div>
+
     </div>
-     
+    <el-button @click="handleAuto" style="position: absolute; top: 10px; left: 10px">自动巡检</el-button>
+    <el-button @click="changeEyes" style="position: absolute; top: 10px; left:100px">切换视角</el-button>
   </div>
- <el-button @click="handleAuto" style="position: absolute; top: 10px; left: 10px">自动巡检</el-button>
-   <el-button @click="changeEyes" style="position: absolute; top: 10px; left:100px">切换视角</el-button>
- </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from "vue";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import {ref, onMounted, reactive} from "vue";
+import {EffectComposer} from "three/examples/jsm/postprocessing/EffectComposer.js";
+import {OutlinePass} from "three/examples/jsm/postprocessing/OutlinePass.js";
+import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import addHeatmapPlane from "../components/roomData/yuntu";
-import { PathGeometry, PathPointList } from "three.path";
+import {PathGeometry, PathPointList} from "three.path";
 import * as TWEEN from '@tweenjs/tween.js'
+
 const thress = ref(null);
 const scene = new THREE.Scene();
-let  camera 
+let camera
 let pathCurve;
-let cameraTween=null;
-let  cubPerson 
+let cameraTween = null;
+let cubPerson
 let jkqSelectObect = {};
-let eyesValue =  ref({})
+let eyesValue = ref(false)
 let controls;
 const state = reactive({
   planePos: {
@@ -65,12 +66,12 @@ const registerRenderFunc = (name, func) => {
 
 const initPathPoints = () => {
   pointArr = [
-    2,0,-5.5,
-    -9,0,-5.5,
-    -9,0,-3,
-    9,0,-3,
-    9,0,2,
-    -5,0,2,
+    2, 0, -5.5,
+    -9, 0, -5.5,
+    -9, 0, -3,
+    9, 0, -3,
+    9, 0, 2,
+    -5, 0, 2,
     // 其他坐标点...
   ];
 
@@ -85,7 +86,6 @@ const initPathPoints = () => {
 };
 
 
-
 function init() {
   var renderer = new THREE.WebGLRenderer();
   initPathPoints();
@@ -93,34 +93,34 @@ function init() {
 
   //创建机器人
   const geoPerson = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-  const matPeron = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-   cubPerson = new THREE.Mesh(geoPerson, matPeron);
-  cubPerson.position.set(2,0,-5.5);
-
+  const matPeron = new THREE.MeshBasicMaterial({color: 0x00ff00});
+  cubPerson = new THREE.Mesh(geoPerson, matPeron);
+  cubPerson.position.set(2, 1, -5.5);
 
 
   const gltfLoader = new GLTFLoader();
   gltfLoader.load(
-    "models/machineRoom.gltf",
-    function(gltf) {
-      gltf.scene.children.forEach(item => {
-        const { map, color } = item.material;
-        if (map) {
-          item.material = new THREE.MeshBasicMaterial({
-            map: crtTexture(item.name.split("-")[0])
-          });
-        } else {
-          item.material = new THREE.MeshBasicMaterial({ color });
-        }
-      });
+      "models/machineRoom.gltf",
+      function (gltf) {
+        gltf.scene.children.forEach(item => {
+          const {map, color} = item.material;
+          if (map) {
+            item.material = new THREE.MeshBasicMaterial({
+              map: crtTexture(item.name.split("-")[0])
+            });
+          } else {
+            item.material = new THREE.MeshBasicMaterial({color});
+          }
+        });
 
-      scene.add(gltf.scene);
-      scene.add(pathToShow); // 确保路径贴图被添加到场景中
-    },
-    num => {},
-    err => {
-      console.log(err, "----wfef");
-    }
+        scene.add(gltf.scene);
+        scene.add(pathToShow); // 确保路径贴图被添加到场景中
+      },
+      num => {
+      },
+      err => {
+        console.log(err, "----wfef");
+      }
   );
 
   function crtTexture(imgName) {
@@ -135,15 +135,15 @@ function init() {
     return curTexture;
   }
 
-   camera = new THREE.PerspectiveCamera(
-   75,
-    thress.value.clientWidth / thress.value.clientHeight,
-    0.1,
-    1000
+  camera = new THREE.PerspectiveCamera(
+      75,
+      thress.value.clientWidth / thress.value.clientHeight,
+      0.1,
+      1000
   );
 
-  camera.position.set(15,15, 15);
-  camera.lookAt(0,0,0);
+  camera.position.set(15, 15, 15);
+  camera.lookAt(0, 0, 0);
   cubPerson.add(camera)
   scene.add(cubPerson);
 
@@ -151,9 +151,9 @@ function init() {
   scene.add(new THREE.AxesHelper(5))
 
   const outlinePass = new OutlinePass(
-    new THREE.Vector2(thress.value.clientWidth, thress.value.clientHeight),
-    scene,
-    camera
+      new THREE.Vector2(thress.value.clientWidth, thress.value.clientHeight),
+      scene,
+      camera
   );
 
   renderer.setSize(thress.value.clientWidth, thress.value.clientHeight);
@@ -167,10 +167,11 @@ function init() {
   controls = new OrbitControls(camera, renderer.domElement);
 
 
-  controls.addEventListener("change", function() {
+  controls.addEventListener("change", function () {
     renderer.render(scene, camera);
   });
-let step = 0;
+  let step = 0;
+
   function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
@@ -178,57 +179,60 @@ let step = 0;
     if (renderFunc['walk-way']) {
       renderFunc['walk-way']();
     }
-    if ( cameraTween){
-      
-      const segment = 10000;
+    if (cameraTween) {
+
+      const segment = 1000;
 // 从路径曲线上面取点
-const stepPoints = pathCurve.getSpacedPoints(segment);
+      const stepPoints = pathCurve.getSpacedPoints(segment);
 
 // 每次前进一小段
-step += 1;
+      step += 1;
 
 // NPC下个位置的索引
-const npcIndex = step % segment;
+      const npcIndex = step % segment;
 
 // NPC下一个位置
-const npcPoint = stepPoints[npcIndex];
-  
+      const npcPoint = stepPoints[npcIndex];
+
 // 更新NPC模型的位置
-  cubPerson.position.copy(npcPoint);
+      cubPerson.position.copy(npcPoint);
 
 // NPC眼睛看向的点的索引
-const eyeIndex = (step + 10) % segment;
+      const eyeIndex = (step + 10) % segment;
 
 // NPC眼睛看向的位置
-const eyePoint = stepPoints[eyeIndex];
-if(eyesValue.value){
-  // 更新NPC模型看向的位置，保证模型的“朝向”
-  cubPerson.lookAt(eyePoint.x,eyePoint.y, npcPoint.z);
+      const eyePoint = stepPoints[eyeIndex];
 
-  camera.lookAt(cubPerson.position.x,1,cubPerson.position.z);
-}
+      if (eyesValue.value) {
+
+        if (points[points.length - 1].x == eyePoint.x && points[points.length - 1].z == eyePoint.z) {
+          cameraTween = false
+        }
+        cubPerson.lookAt(eyePoint.x, eyePoint.y, npcPoint.z);
 
 
- 
-    
+        camera.lookAt(cubPerson.position.x, 1, cubPerson.position.z);
+      }
+
 
 // 更新NPC模型看向的位置，保证模型的“朝向”
-  
 
-   //TWEEN.update();
+
+      //TWEEN.update();
     }
-    
- 
+
+
   }
+
   animate();
 
   renderer.domElement.addEventListener("click", event => {
-    console.log(jkqSelectObect,'jkqSelectObect')
+    console.log(jkqSelectObect, 'jkqSelectObect')
     if (Object.keys(jkqSelectObect).length > 0) {
       jkqSelectObect.material.map = crtTexture("cabinet");
-      camera.position.set(jkqSelectObect.position.x+1,3,jkqSelectObect.position.z)
-      camera.lookAt(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
-      // controls.target.copy(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
+      // camera.position.set(jkqSelectObect.position.x+1,3,jkqSelectObect.position.z)
+      // camera.lookAt(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
+      //  controls.target.copy(jkqSelectObect.position.x,3,jkqSelectObect.position.z)
       // controls.update()
     } else {
       jkqSelectObect.material.map = crtTexture("cabinet-hover");
@@ -241,8 +245,8 @@ if(eyesValue.value){
     const x = (px / thress.value.clientWidth) * 2 - 1;
     const y = -(py / thress.value.clientHeight) * 2 + 1;
 
-    raycaster.ray.origin = new THREE.Vector3(0, 100, 0);
-    raycaster.ray.direction = new THREE.Vector3(0, -1, 0);
+    // raycaster.ray.origin = new THREE.Vector3(0, 100, 0);
+    // raycaster.ray.direction = new THREE.Vector3(0, -1, 0);
     raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
 
     const intersects = raycaster.intersectObjects(scene.children);
@@ -280,7 +284,7 @@ if(eyesValue.value){
     }
   });
 
-  
+
   addHeatmapPlane(scene);
 }
 
@@ -295,7 +299,7 @@ const renderPath = async (renderer) => {
 
   const material = new THREE.MeshBasicMaterial({
     map: arrow,
-  
+
     blending: THREE.CustomBlending,
   });
 
@@ -316,27 +320,31 @@ const renderPath = async (renderer) => {
 };
 
 
-
-const changeEyes =  ()=>{
-  eyesValue.value =  !eyesValue.value
-  if(!eyesValue.value){
-    camera.lookAt(0,0,0);
-    camera.position.set(0,20,4)
+const changeEyes = () => {
+  eyesValue.value = !eyesValue.value
+  if (!eyesValue.value) {
+    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 20, 4)
     scene.add(camera)
-    controls.enabled =  true
+    controls.enabled = true
     controls.update()
-  }else{
-    controls.enabled =  false
+
+  } else {
+    camera.position.set(0, 1, -1);
+    cubPerson.add(camera)
+    controls.enabled = false
   }
+
 }
 
-const handleAuto = ()=>{
+const handleAuto = () => {
+  eyesValue.value = true
+  cameraTween = true
+  controls.enabled = false
+  camera.position.set(0, 1, -1);
+  cubPerson.add(camera)
 
-  cameraTween =  true
-  controls.enabled =  false
 
-
-   camera.position.set(0, 1,-1 );
 // const segment = 30000;
 
 // // // 取相机当前位置，从当前位置，平滑移动到目标位置
@@ -365,8 +373,6 @@ const handleAuto = ()=>{
 // });
 
 
-
-
 }
 
 onMounted(() => {
@@ -374,7 +380,7 @@ onMounted(() => {
 });
 
 function selectCabinet(x, y) {
-  const { width, height } = thress.value;
+  const {width, height} = thress.value;
   pointer.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
 }
 
