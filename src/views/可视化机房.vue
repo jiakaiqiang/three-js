@@ -204,7 +204,7 @@ function init() {
       const eyePoint = stepPoints[eyeIndex];
 
       if (eyesValue.value) {
-
+       console.log(points[points.length - 1],eyePoint,'-wefwefw',npcPoint)
         if (points[points.length - 1].x == eyePoint.x && points[points.length - 1].z == eyePoint.z) {
           cameraTween = false
         }
